@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Users, BarChart3, LogOut, AlertTriangle } from 'lucide-react';
+import PerformanceRiskPanel from '@/components/risk/PerformanceRiskPanel';
 
 interface Student {
   id: string;
@@ -143,6 +144,11 @@ export default function FacultyDashboard() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Performance Risk Prediction */}
+        <div className="mt-6">
+          <PerformanceRiskPanel students={students} />
         </div>
 
         {/* Full Student List */}
