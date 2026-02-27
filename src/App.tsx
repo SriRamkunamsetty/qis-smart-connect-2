@@ -26,6 +26,8 @@ const InsightsDashboard = lazy(() => import('./components/insights/InsightsDashb
 const PlacementPrediction = lazy(() => import('./components/prediction/PlacementPrediction'));
 const SkillGapAnalysis = lazy(() => import('./components/skillgap/SkillGapAnalysis'));
 const CareerRoadmap = lazy(() => import('./components/career/CareerRoadmap'));
+const PlacementReadinessScore = lazy(() => import('./components/placement-readiness/PlacementReadinessScore'));
+const TransportTracker = lazy(() => import('./components/transport/TransportTracker'));
 const FacultyDashboard = lazy(() => import('./pages/FacultyDashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -140,6 +142,8 @@ function MainLayout() {
             <Route path="/placement-prediction" element={<PlacementPrediction />} />
             <Route path="/skill-gap" element={<SkillGapAnalysis />} />
             <Route path="/career-roadmap" element={<CareerRoadmap />} />
+            <Route path="/placement-readiness" element={<PlacementReadinessScore />} />
+            <Route path="/transport-tracker" element={<TransportTracker />} />
             <Route path="/student-dashboard" element={<StudentDashboard />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/faculty/dashboard" element={<FacultyDashboard />} />

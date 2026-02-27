@@ -127,4 +127,6 @@ export const searchableContent = [
   { type: 'Page', title: 'Placement Prediction', path: '/placement-prediction' },
   { type: 'Page', title: 'Skill Gap Analyzer', path: '/skill-gap' },
   { type: 'Page', title: 'Career Roadmap', path: '/career-roadmap' },
+  { type: 'Page', title: 'Placement Readiness Score', path: '/placement-readiness' },
+  { type: 'Page', title: 'Transport Route Tracker', path: '/transport-tracker' },
 ];
