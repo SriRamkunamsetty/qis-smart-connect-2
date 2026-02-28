@@ -1,37 +1,51 @@
+import { NavigationPanel } from './navigation/NavigationPanel';
+
 export default function MapSection() {
   return (
-    <section className="py-16">
-      <div className="container mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="section-title">Find <span className="gradient-text">Us</span></h2>
-          <p className="section-subtitle">Located in Ongole, Andhra Pradesh</p>
+    <section className="py-20 relative overflow-hidden" id="navigation">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="section-title mb-4">Live <span className="gradient-text">Navigation</span></h2>
+          <p className="section-subtitle">Real-time directions to our campus from your current location</p>
         </div>
-        <div className="rounded-3xl overflow-hidden border border-border shadow-card h-80 md:h-96 relative">
-          <div className="absolute inset-0 bg-gradient-hero flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto mb-4 animate-float shadow-glow">
-                <span className="text-2xl">📍</span>
-              </div>
-              <h3 className="font-grotesk font-bold text-xl mb-2">QISCET Campus</h3>
-              <p className="text-muted-foreground text-sm">Ongole, Prakasam District, Andhra Pradesh - 523272</p>
-              <a
-                href="https://maps.google.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary mt-5 inline-flex"
-              >
-                Open in Google Maps
-              </a>
-            </div>
+
+        <div className="max-w-5xl mx-auto">
+          <NavigationPanel />
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 rounded-2xl border-emerald-500/10">
+            <h4 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Main Campus
+            </h4>
+            <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+              Ongole, Prakasam District,<br />
+              Andhra Pradesh - 523272
+            </p>
           </div>
-          {/* Decorative grid */}
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: `
-              linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
-              linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px'
-          }} />
+
+          <div className="glass-card p-6 rounded-2xl border-amber-500/10">
+            <h4 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              Contact Info
+            </h4>
+            <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+              Phone: +91 91234 56789<br />
+              Email: info@qiscet.edu.in
+            </p>
+          </div>
+
+          <div className="glass-card p-6 rounded-2xl border-primary/10">
+            <h4 className="font-bold text-lg mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary" />
+              Office Hours
+            </h4>
+            <p className="text-sm text-muted-foreground leading-relaxed font-medium">
+              Mon - Sat: 9:00 AM - 5:00 PM<br />
+              Sunday: Closed
+            </p>
+          </div>
         </div>
       </div>
     </section>

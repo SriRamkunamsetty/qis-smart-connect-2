@@ -1,38 +1,95 @@
-import { useState } from 'react';
-import { galleryImages } from '@/data/dummyData';
+import { useState, useEffect } from 'react';
 import { X, ZoomIn } from 'lucide-react';
+import { eventService, CampusEvent } from '@/services/eventService';
+import { onSnapshot } from 'firebase/firestore';
+
+interface GalleryImage {
+  id: string;
+  src: string;
+  title: string;
+  category: string;
+}
 
 const categories = ['all', 'events', 'labs', 'campus'];
 
 export default function GalleryPage() {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [lightbox, setLightbox] = useState<null | typeof galleryImages[0]>(null);
+  const [events, setEvents] = useState<CampusEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<null | GalleryImage>(null);
 
-  const filtered = activeCategory === 'all' ? galleryImages : galleryImages.filter(img => img.category === activeCategory);
+  useEffect(() => {
+    setLoading(true);
+    const q = eventService.getEvents(activeCategory);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedEvents = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as CampusEvent));
+      setEvents(fetchedEvents);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [activeCategory]);
+
+  const galleryImages: GalleryImage[] = events.flatMap(event =>
+    event.images.map((url, idx) => ({
+      id: `${event.id}-${idx}`,
+      src: url,
+      title: event.title,
+      category: event.category
+    }))
+  );
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in min-h-[400px]">
       <div className="flex flex-wrap justify-center gap-3 mb-8">
         {categories.map(cat => (
-          <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${activeCategory === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-primary/10'}`}>
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${activeCategory === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-primary/10'
+              }`}
+          >
             {cat === 'all' ? '✨ All' : cat === 'events' ? '🎉 Events' : cat === 'labs' ? '🔬 Labs' : '🏫 Campus'}
           </button>
         ))}
       </div>
 
-      <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
-        {filtered.map((img, i) => (
-          <div key={img.id} className="break-inside-avoid relative overflow-hidden rounded-2xl cursor-pointer group animate-fade-in" style={{ animationDelay: `${i * 0.08}s` }} onClick={() => setLightbox(img)}>
-            <img src={img.src} alt={img.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/50 transition-all duration-300 flex items-center justify-center">
-              <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-muted-foreground">No images found in this category.</p>
+        </div>
+      ) : (
+        <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
+          {galleryImages.map((img, i) => (
+            <div
+              key={img.id}
+              className="break-inside-avoid relative overflow-hidden rounded-2xl cursor-pointer group animate-fade-in"
+              style={{ animationDelay: `${i * 0.05}s` }}
+              onClick={() => setLightbox(img)}
+            >
+              <img
+                src={img.src}
+                alt={img.title}
+                className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/50 transition-all duration-300 flex items-center justify-center">
+                <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-sm font-medium">{img.title}</p>
+              </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-              <p className="text-white text-sm font-medium">{img.title}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {lightbox && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-fade-in" onClick={() => setLightbox(null)}>
@@ -40,7 +97,11 @@ export default function GalleryPage() {
             <X className="w-5 h-5 text-white" />
           </button>
           <div className="max-w-4xl w-full animate-scale-in" onClick={e => e.stopPropagation()}>
-            <img src={lightbox.src.replace('w=400', 'w=1200').replace('w=600', 'w=1200')} alt={lightbox.title} className="w-full rounded-2xl object-cover max-h-[80vh]" />
+            <img
+              src={lightbox.src}
+              alt={lightbox.title}
+              className="w-full rounded-2xl object-cover max-h-[80vh] mx-auto"
+            />
             <p className="text-white font-semibold text-lg text-center mt-4">{lightbox.title}</p>
           </div>
         </div>
