@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Bell, ChevronRight, AlertCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { noticeService, Notice } from '../services/noticeService';
-import { onSnapshot } from 'firebase/firestore';
 
 export default function NoticeBoard() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -18,17 +17,24 @@ export default function NoticeBoard() {
   };
 
   useEffect(() => {
-    const q = noticeService.getNotices('All', 5);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedNotices = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Notice));
-      setNotices(fetchedNotices);
-      setLoading(false);
-    });
+    let mounted = true;
 
-    return () => unsubscribe();
+    const fetchNotices = async () => {
+      try {
+        const fetchedNotices = await noticeService.getNotices('All', 5);
+        if (mounted) {
+          setNotices(fetchedNotices);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notices:", error);
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchNotices();
+
+    return () => { mounted = false; };
   }, []);
 
   return (
