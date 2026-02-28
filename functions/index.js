@@ -1,9 +1,132 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, HttpsError, onRequest } from 'firebase-functions/v2/https';
 import admin from 'firebase-admin';
+import express from 'express';
+import cors from 'cors';
 
 admin.initializeApp();
 const db = admin.firestore();
+
+// Initialize Express App
+const app = express();
+
+// Use CORS with origin true (allows Vercel production domain)
+app.use(cors({ origin: true }));
+app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Example route for MongoDB/Secrets (Gen 2 compatible)
+app.get('/api-config', (req, res) => {
+    res.json({
+        mongodbSet: !!process.env.MONGODB_URI,
+        secretKeySet: !!process.env.SECRET_KEY
+    });
+});
+
+// Primary API Function Export
+export const api = onRequest(app);
+
+// CRUD Helper Methods
+const getCollection = async (coll, res) => {
+    try {
+        const snapshot = await db.collection(coll).get();
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getDoc = async (coll, id, res) => {
+    try {
+        const doc = await db.collection(coll).doc(id).get();
+        if (!doc.exists) return res.status(404).json({ error: 'Not found' });
+        res.status(200).json({ id: doc.id, ...doc.data() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const createDoc = async (coll, data, res) => {
+    try {
+        const docRef = await db.collection(coll).add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        res.status(201).json({ id: docRef.id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const updateDoc = async (coll, id, data, res) => {
+    try {
+        await db.collection(coll).doc(id).update({ ...data, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const deleteDoc = async (coll, id, res) => {
+    try {
+        await db.collection(coll).doc(id).delete();
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Routes
+['students', 'faculty', 'circulars'].forEach(coll => {
+    app.get(`/${coll}`, (req, res) => getCollection(coll, res));
+    app.get(`/${coll}/:id`, (req, res) => getDoc(coll, req.params.id, res));
+    app.post(`/${coll}`, (req, res) => createDoc(coll, req.body, res));
+    app.patch(`/${coll}/:id`, (req, res) => updateDoc(coll, req.params.id, req.body, res));
+    app.delete(`/${coll}/:id`, (req, res) => deleteDoc(coll, req.params.id, res));
+});
+
+// Seed route
+app.get('/seed', async (req, res) => {
+    try {
+        const batch = db.batch();
+
+        // Sample Students
+        const students = [
+            { name: "John Doe", rollNumber: "22QIS01", branch: "CSE", cgpa: 8.5 },
+            { name: "Jane Smith", rollNumber: "22QIS02", branch: "ECE", cgpa: 9.0 },
+            { name: "Bob Johnson", rollNumber: "22QIS03", branch: "MECH", cgpa: 7.5 },
+            { name: "Alice Brown", rollNumber: "22QIS04", branch: "CIVIL", cgpa: 8.0 },
+            { name: "Charlie Davis", rollNumber: "22QIS05", branch: "CSDS", cgpa: 8.8 }
+        ];
+
+        // Sample Faculty
+        const faculty = [
+            { name: "Dr. Rama Rao", department: "CSE", role: "HOD" },
+            { name: "Prof. Lakshmi", department: "ECE", role: "Professor" }
+        ];
+
+        // Sample Circulars
+        const circulars = [
+            { title: "Exam Schedule", category: "Exam", date: "2026-03-01" },
+            { title: "Placement Drive", category: "Placement", date: "2026-03-05" },
+            { title: "Holiday Notice", category: "General", date: "2026-03-10" }
+        ];
+
+        students.forEach(s => batch.set(db.collection('students').doc(), s));
+        faculty.forEach(f => batch.set(db.collection('faculty').doc(), f));
+        circulars.forEach(c => batch.set(db.collection('circulars').doc(), c));
+
+        await batch.commit();
+        res.status(200).json({ message: "Seeding complete" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Existing Firestore and Callable Functions
+// ...
 
 /**
  * 1. Performance Risk Prediction
