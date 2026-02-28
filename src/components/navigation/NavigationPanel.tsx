@@ -8,7 +8,7 @@ import { ExternalLink } from 'lucide-react';
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 export const NavigationPanel: React.FC = () => {
-    const [travelMode, setTravelMode] = useState<google.maps.TravelMode>(google.maps.TravelMode.DRIVING);
+    const [travelMode, setTravelMode] = useState<google.maps.TravelMode>('DRIVING' as google.maps.TravelMode);
     const [routeInfo, setRouteInfo] = useState({
         distance: '',
         duration: '',

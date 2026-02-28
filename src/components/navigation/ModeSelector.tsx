@@ -8,10 +8,10 @@ interface ModeSelectorProps {
 
 export const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeChange }) => {
     const modes = [
-        { label: 'Driving', mode: google.maps.TravelMode.DRIVING, icon: Car },
-        { label: 'Walking', mode: google.maps.TravelMode.WALKING, icon: Footprints },
-        { label: 'Biking', mode: google.maps.TravelMode.BICYCLING, icon: Bike },
-        { label: 'Transit', mode: google.maps.TravelMode.TRANSIT, icon: Bus },
+        { label: 'Driving', mode: 'DRIVING' as google.maps.TravelMode, icon: Car },
+        { label: 'Walking', mode: 'WALKING' as google.maps.TravelMode, icon: Footprints },
+        { label: 'Biking', mode: 'BICYCLING' as google.maps.TravelMode, icon: Bike },
+        { label: 'Transit', mode: 'TRANSIT' as google.maps.TravelMode, icon: Bus },
     ];
 
     return (
