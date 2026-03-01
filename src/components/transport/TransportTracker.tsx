@@ -1,25 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bus, MapPin, Clock, Phone, Navigation, Route, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Stop {
-  name: string;
-  time: string;
-}
-
-interface TransportRoute {
-  id: string;
-  route_name: string;
-  bus_number: string;
-  stops: Stop[];
-  departure_time: string;
-  estimated_arrival: string;
-  distance_km: number;
-  fee_per_year: number;
-  driver_name: string | null;
-  driver_phone: string | null;
-  is_active: boolean;
-}
+import { transportRoutes, TransportRoute } from '@/data/transport';
 
 function formatTime(time: string) {
   const [h, m] = time.split(':').map(Number);
@@ -41,20 +22,9 @@ export default function TransportTracker() {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchRoutes = async () => {
-      const { data } = await (supabase as any)
-        .from('transport_routes')
-        .select('*')
-        .eq('is_active', true)
-        .order('departure_time');
-      
-      setRoutes((data || []).map((r: any) => ({
-        ...r,
-        stops: typeof r.stops === 'string' ? JSON.parse(r.stops) : r.stops,
-      })));
-      setLoading(false);
-    };
-    fetchRoutes();
+    // Use local data (Firebase can be added later)
+    setRoutes(transportRoutes.filter(r => r.is_active));
+    setLoading(false);
   }, []);
 
   const selected = routes.find(r => r.id === selectedRoute);
@@ -79,7 +49,6 @@ export default function TransportTracker() {
           <div className="text-center py-20 text-muted-foreground">Loading routes...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Route List */}
             <div className="lg:col-span-1 space-y-3">
               <h3 className="font-grotesk font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-2">All Routes</h3>
               {routes.map(route => (
@@ -87,9 +56,7 @@ export default function TransportTracker() {
                   key={route.id}
                   onClick={() => setSelectedRoute(route.id)}
                   className={`w-full text-left p-4 rounded-2xl border transition-all ${
-                    selectedRoute === route.id
-                      ? 'bg-primary/5 border-primary/30 shadow-sm'
-                      : 'bg-card border-border hover:border-primary/20'
+                    selectedRoute === route.id ? 'bg-primary/5 border-primary/30 shadow-sm' : 'bg-card border-border hover:border-primary/20'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -117,11 +84,9 @@ export default function TransportTracker() {
               ))}
             </div>
 
-            {/* Route Details */}
             <div className="lg:col-span-2">
               {selected ? (
                 <div className="space-y-5">
-                  {/* Header Card */}
                   <div className="feature-card">
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -135,7 +100,6 @@ export default function TransportTracker() {
                         </div>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
                         { label: 'Departure', value: formatTime(selected.departure_time), icon: Clock },
@@ -152,7 +116,6 @@ export default function TransportTracker() {
                     </div>
                   </div>
 
-                  {/* Driver Info */}
                   {selected.driver_name && (
                     <div className="feature-card flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -165,7 +128,6 @@ export default function TransportTracker() {
                     </div>
                   )}
 
-                  {/* Stops Timeline */}
                   <div className="feature-card">
                     <h3 className="font-grotesk font-semibold text-sm mb-5 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-primary" />
@@ -182,11 +144,7 @@ export default function TransportTracker() {
                               <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center z-10 flex-shrink-0 ${
                                 isFirst || isLast ? 'bg-primary text-primary-foreground' : 'bg-card border-2 border-primary/30'
                               }`}>
-                                {isFirst || isLast ? (
-                                  <MapPin className="w-3.5 h-3.5" />
-                                ) : (
-                                  <div className="w-2 h-2 rounded-full bg-primary/50" />
-                                )}
+                                {isFirst || isLast ? <MapPin className="w-3.5 h-3.5" /> : <div className="w-2 h-2 rounded-full bg-primary/50" />}
                               </div>
                               <div className="flex-1 flex items-center justify-between">
                                 <span className={`text-sm ${isFirst || isLast ? 'font-semibold' : ''}`}>{stop.name}</span>

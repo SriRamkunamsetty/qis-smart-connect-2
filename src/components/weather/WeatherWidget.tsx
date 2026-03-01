@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Cloud, Sun, Droplets, Wind, CloudRain, SunMedium } from 'lucide-react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 
 interface WeatherData {
   temp: number;
@@ -10,30 +8,60 @@ interface WeatherData {
   wind: number;
   rainAlert: boolean;
   location: string;
+  icon: string;
 }
+
+const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
+const DEFAULT_LAT = 15.5057; // Ongole latitude
+const DEFAULT_LON = 80.0499; // Ongole longitude
+
+async function fetchWeather(): Promise<WeatherData | null> {
+  if (!OPENWEATHER_API_KEY) return null;
+  try {
+    const res = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${DEFAULT_LAT}&lon=${DEFAULT_LON}&units=metric&appid=${OPENWEATHER_API_KEY}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      temp: Math.round(data.main.temp),
+      condition: data.weather?.[0]?.main || 'Clear',
+      humidity: data.main.humidity,
+      wind: Math.round(data.wind.speed * 3.6), // m/s to km/h
+      rainAlert: data.weather?.[0]?.main === 'Rain',
+      location: 'Ongole',
+      icon: data.weather?.[0]?.icon || '01d',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Fallback static weather when API key is not available
+const fallbackWeather: WeatherData = {
+  temp: 32,
+  condition: 'Sunny',
+  humidity: 65,
+  wind: 12,
+  rainAlert: false,
+  location: 'Ongole',
+  icon: '01d',
+};
 
 export default function WeatherWidget({ compact = false }: { compact?: boolean }) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Real-time listener for Settings/Weather
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'weather'), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setWeather({
-          temp: data.data?.temp || 0,
-          condition: data.data?.condition || 'Unknown',
-          humidity: data.data?.humidity || 0,
-          wind: data.data?.wind || 0,
-          rainAlert: data.data?.rainAlert || false,
-          location: data.location || 'Ongole'
-        });
-      }
+    const load = async () => {
+      const live = await fetchWeather();
+      setWeather(live || fallbackWeather);
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    load();
+    // Refresh every 10 minutes
+    const interval = setInterval(load, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <div className="animate-pulse flex items-center gap-2 text-xs text-muted-foreground">🌤️ Loading...</div>;
@@ -41,7 +69,7 @@ export default function WeatherWidget({ compact = false }: { compact?: boolean }
 
   const IconComponent = weather.condition.includes('Rain') ? CloudRain :
     weather.condition.includes('Cloud') ? Cloud :
-      weather.condition.includes('Sunny') ? Sun : SunMedium;
+      weather.condition.includes('Sunny') || weather.condition.includes('Clear') ? Sun : SunMedium;
 
   if (compact) {
     return (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, ZoomIn } from 'lucide-react';
 import { eventService, CampusEvent } from '@/services/eventService';
-import { onSnapshot } from 'firebase/firestore';
+import { galleryImages as localGalleryImages } from '@/data/gallery';
 
 interface GalleryImage {
   id: string;
@@ -20,28 +20,34 @@ export default function GalleryPage() {
 
   useEffect(() => {
     setLoading(true);
-    const q = eventService.getEvents(activeCategory);
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedEvents = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as CampusEvent));
-      setEvents(fetchedEvents);
+    const fetchEvents = async () => {
+      try {
+        const fetched = await eventService.getEvents(activeCategory === 'all' ? undefined : activeCategory);
+        setEvents(fetched);
+      } catch {
+        setEvents([]);
+      }
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    fetchEvents();
   }, [activeCategory]);
 
-  const galleryImages: GalleryImage[] = events.flatMap(event =>
-    event.images.map((url, idx) => ({
-      id: `${event.id}-${idx}`,
-      src: url,
-      title: event.title,
-      category: event.category
-    }))
-  );
+  // Use event images if available, otherwise use local gallery
+  const galleryImages: GalleryImage[] = events.length > 0
+    ? events.flatMap(event =>
+        event.images.map((url, idx) => ({
+          id: `${event.id}-${idx}`,
+          src: url,
+          title: event.title,
+          category: event.category
+        }))
+      )
+    : localGalleryImages.map(img => ({
+        id: String(img.id),
+        src: img.src,
+        title: img.title,
+        category: img.category,
+      }));
 
   return (
     <div className="animate-fade-in min-h-[400px]">
@@ -50,8 +56,7 @@ export default function GalleryPage() {
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${activeCategory === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-primary/10'
-              }`}
+            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${activeCategory === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-primary/10'}`}
           >
             {cat === 'all' ? '✨ All' : cat === 'events' ? '🎉 Events' : cat === 'labs' ? '🔬 Labs' : '🏫 Campus'}
           </button>
@@ -62,7 +67,7 @@ export default function GalleryPage() {
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : events.length === 0 ? (
+      ) : galleryImages.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted-foreground">No images found in this category.</p>
         </div>
@@ -75,11 +80,7 @@ export default function GalleryPage() {
               style={{ animationDelay: `${i * 0.05}s` }}
               onClick={() => setLightbox(img)}
             >
-              <img
-                src={img.src}
-                alt={img.title}
-                className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
+              <img src={img.src} alt={img.title} className="w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/50 transition-all duration-300 flex items-center justify-center">
                 <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
@@ -97,11 +98,7 @@ export default function GalleryPage() {
             <X className="w-5 h-5 text-white" />
           </button>
           <div className="max-w-4xl w-full animate-scale-in" onClick={e => e.stopPropagation()}>
-            <img
-              src={lightbox.src}
-              alt={lightbox.title}
-              className="w-full rounded-2xl object-cover max-h-[80vh] mx-auto"
-            />
+            <img src={lightbox.src} alt={lightbox.title} className="w-full rounded-2xl object-cover max-h-[80vh] mx-auto" />
             <p className="text-white font-semibold text-lg text-center mt-4">{lightbox.title}</p>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Trophy, TrendingUp, Briefcase, Code2, GraduationCap, FileText, Sparkles, ChevronRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
 interface ReadinessData {
@@ -94,31 +93,11 @@ export default function PlacementReadinessScore() {
   const [manualInternships, setManualInternships] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
-  // Try to fetch from DB
+  // Manual mode always (Firebase integration can be added later)
   useEffect(() => {
-    if (!user?.uid) { setManualMode(true); setLoaded(true); return; }
-
-    const fetchData = async () => {
-      const { data: student } = await supabase
-        .from('students')
-        .select('*')
-        .eq('user_id', user.uid)
-        .limit(1)
-        .single();
-
-      if (!student) { setManualMode(true); setLoaded(true); return; }
-
-      setData({
-        cgpa: student.cgpa || 0,
-        skills: [], // Skills would come from student profile
-        internshipCount: 0,
-        resumeScore: null,
-      });
-      setManualCgpa(student.cgpa || 0);
-      setLoaded(true);
-    };
-    fetchData();
-  }, [user?.uid]);
+    setManualMode(true);
+    setLoaded(true);
+  }, []);
 
   const effectiveData = useMemo<ReadinessData>(() => {
     if (manualMode || !loaded) {
