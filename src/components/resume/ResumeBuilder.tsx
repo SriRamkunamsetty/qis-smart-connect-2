@@ -5,7 +5,7 @@ import ResumePreview from './ResumePreview';
 import type { ResumeData, SectionConfig, TemplateKey } from './ResumePreview';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { supabase } from '@/integrations/supabase/client';
+// AI features will use Firebase Cloud Functions
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 
@@ -149,12 +149,8 @@ export default function ResumeBuilderPage() {
   const scoreResume = async () => {
     setScoring(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('score-resume', {
-        body: { resume: data, action: 'score' },
-      });
-      if (error) throw error;
-      if (result?.error) throw new Error(result.error);
-      setAiScore(result);
+      // TODO: Replace with Firebase Cloud Function call
+      toast({ title: 'Coming Soon', description: 'AI Resume Scoring will be available once Firebase functions are configured.' });
     } catch (err: any) {
       toast({ title: 'Scoring failed', description: err.message, variant: 'destructive' });
     } finally {
@@ -165,18 +161,8 @@ export default function ResumeBuilderPage() {
   const enhanceResume = async () => {
     setEnhancing(true);
     try {
-      const { data: result, error } = await supabase.functions.invoke('score-resume', {
-        body: { resume: data, action: 'enhance' },
-      });
-      if (error) throw error;
-      if (result?.error) throw new Error(result.error);
-      setData(prev => ({
-        ...prev,
-        summary: result.enhancedSummary || prev.summary,
-        experience: result.enhancedExperience || prev.experience,
-        projects: result.enhancedProjects || prev.projects,
-      }));
-      toast({ title: '✨ Resume enhanced!', description: 'Your content has been improved with AI.' });
+      // TODO: Replace with Firebase Cloud Function call
+      toast({ title: 'Coming Soon', description: 'AI Resume Enhancement will be available once Firebase functions are configured.' });
     } catch (err: any) {
       toast({ title: 'Enhancement failed', description: err.message, variant: 'destructive' });
     } finally {

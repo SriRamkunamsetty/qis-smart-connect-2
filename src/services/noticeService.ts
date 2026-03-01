@@ -1,60 +1,62 @@
-import { apiService } from './apiService';
+import { notices, Notice } from '../data/notices';
+import { collection, getDocs, query, where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
-export interface Notice {
-    id?: string;
-    title: string;
-    description: string;
-    category: 'Academic' | 'Placement' | 'Sports' | 'General' | 'Exam' | 'Event';
-    date: string;
-    createdAt?: any;
-    createdBy?: string;
-    attachmentUrl?: string;
-    pinned?: boolean;
-    priority?: 'Low' | 'Medium' | 'High';
-}
+export type { Notice };
 
-const API_PATH = '/circulars';
+const COLLECTION = 'circulars';
 
 export const noticeService = {
-    // Get all notices
-    getNotices: async (category?: string, limitCount?: number) => {
-        let notices: Notice[] = [];
-        try {
-            const result = await apiService.get<Notice[]>(API_PATH);
-            notices = Array.isArray(result) ? result : [];
-        } catch {
-            notices = [];
-        }
-
+  getNotices: async (category?: string, limitCount?: number): Promise<Notice[]> => {
+    try {
+      // Try Firebase first
+      const q = query(collection(db, COLLECTION), orderBy('date', 'desc'));
+      const snapshot = await getDocs(q);
+      if (snapshot.size > 0) {
+        let result = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notice));
         if (category && category !== 'All') {
-            notices = notices.filter(n => n.category === category);
+          result = result.filter(n => n.category === category);
         }
-
-        if (limitCount) {
-            notices = notices.slice(0, limitCount);
-        }
-
-        return notices;
-    },
-
-    // Get notice by ID
-    getNoticeById: async (id: string) => {
-        return await apiService.get<Notice>(`${API_PATH}/${id}`);
-    },
-
-    // Create notice
-    createNotice: async (notice: Omit<Notice, 'id'>) => {
-        const result = await apiService.post<{ id: string }>(API_PATH, notice);
-        return result.id;
-    },
-
-    // Update notice
-    updateNotice: async (id: string, updates: Partial<Notice>) => {
-        await apiService.patch(`${API_PATH}/${id}`, updates);
-    },
-
-    // Delete notice
-    deleteNotice: async (id: string) => {
-        await apiService.delete(`${API_PATH}/${id}`);
+        if (limitCount) result = result.slice(0, limitCount);
+        return result;
+      }
+    } catch {
+      // Firebase not available, fall through to local data
     }
+
+    // Fallback to local data
+    let result = [...notices];
+    if (category && category !== 'All') {
+      result = result.filter(n => n.category === category);
+    }
+    if (limitCount) result = result.slice(0, limitCount);
+    return result;
+  },
+
+  getNoticeById: async (id: string): Promise<Notice | null> => {
+    try {
+      const { doc: docRef, getDoc } = await import('firebase/firestore');
+      const snap = await getDoc(docRef(db, COLLECTION, id));
+      if (snap.exists()) return { id: snap.id, ...snap.data() } as Notice;
+    } catch {
+      // fallback
+    }
+    return notices.find(n => n.id === id) || null;
+  },
+
+  createNotice: async (notice: Omit<Notice, 'id'>): Promise<string> => {
+    const { addDoc } = await import('firebase/firestore');
+    const docRef = await addDoc(collection(db, COLLECTION), notice);
+    return docRef.id;
+  },
+
+  updateNotice: async (id: string, updates: Partial<Notice>) => {
+    const { doc: docRef, updateDoc } = await import('firebase/firestore');
+    await updateDoc(docRef(db, COLLECTION, id), updates);
+  },
+
+  deleteNotice: async (id: string) => {
+    const { doc: docRef, deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(docRef(db, COLLECTION, id));
+  },
 };

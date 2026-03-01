@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Map, Sparkles, Loader2, BookOpen, Award, Briefcase, DollarSign } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const CAREER_GOALS = [
@@ -37,12 +36,10 @@ export default function CareerRoadmap() {
     setLoading(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('score-resume', {
-        body: { resume: { careerGoal: goal, branch, skills }, action: 'career-roadmap' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setResult(data);
+      // TODO: Replace with Firebase Cloud Function call
+      toast({ title: 'Coming Soon', description: 'AI Career Roadmap will be available once Firebase functions are configured.' });
+      // Placeholder: In production, call Firebase function here
+      // const result = await fetch('/api/career-roadmap', { method: 'POST', body: JSON.stringify({ goal, branch, skills }) });
     } catch (err: any) {
       toast({ title: 'Failed', description: err.message, variant: 'destructive' });
     } finally {
