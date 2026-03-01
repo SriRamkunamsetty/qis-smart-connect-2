@@ -42,7 +42,7 @@ export default function TransportTracker() {
 
   useEffect(() => {
     const fetchRoutes = async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('transport_routes')
         .select('*')
         .eq('is_active', true)

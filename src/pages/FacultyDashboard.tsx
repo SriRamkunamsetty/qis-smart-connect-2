@@ -167,7 +167,16 @@ export default function FacultyDashboard() {
 
         {/* Performance Risk Prediction */}
         <div className="mt-6">
-          <PerformanceRiskPanel students={students} />
+          <PerformanceRiskPanel students={students.map(s => ({
+            id: s.id,
+            name: s.name,
+            roll_number: s.rollNumber,
+            branch: s.branch,
+            academic_year: s.academicYear,
+            section: s.section,
+            attendance_percent: s.attendance,
+            cgpa: s.cgpa,
+          }))} />
         </div>
 
         {/* Full Student List */}

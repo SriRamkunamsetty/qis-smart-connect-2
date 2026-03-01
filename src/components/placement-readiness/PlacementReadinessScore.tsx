@@ -96,13 +96,13 @@ export default function PlacementReadinessScore() {
 
   // Try to fetch from DB
   useEffect(() => {
-    if (!user?.id) { setManualMode(true); setLoaded(true); return; }
+    if (!user?.uid) { setManualMode(true); setLoaded(true); return; }
 
     const fetchData = async () => {
       const { data: student } = await supabase
         .from('students')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.uid)
         .limit(1)
         .single();
 
@@ -118,7 +118,7 @@ export default function PlacementReadinessScore() {
       setLoaded(true);
     };
     fetchData();
-  }, [user?.id]);
+  }, [user?.uid]);
 
   const effectiveData = useMemo<ReadinessData>(() => {
     if (manualMode || !loaded) {

@@ -17,7 +17,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password, role);
+      await login(email, password);
       navigate(role === 'admin' ? '/admin-dashboard' : role === 'faculty' ? '/faculty/dashboard' : '/student-dashboard');
     } catch (err: any) {
       // Auth errors handled by toast in context or here
