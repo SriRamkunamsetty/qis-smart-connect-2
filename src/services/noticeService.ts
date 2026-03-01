@@ -18,7 +18,13 @@ const API_PATH = '/circulars';
 export const noticeService = {
     // Get all notices
     getNotices: async (category?: string, limitCount?: number) => {
-        let notices = await apiService.get<Notice[]>(API_PATH);
+        let notices: Notice[] = [];
+        try {
+            const result = await apiService.get<Notice[]>(API_PATH);
+            notices = Array.isArray(result) ? result : [];
+        } catch {
+            notices = [];
+        }
 
         if (category && category !== 'All') {
             notices = notices.filter(n => n.category === category);
