@@ -30,6 +30,9 @@ const CareerRoadmap = lazy(() => import('./components/career/CareerRoadmap'));
 const PlacementReadinessScore = lazy(() => import('./components/placement-readiness/PlacementReadinessScore'));
 const TransportTracker = lazy(() => import('./components/transport/TransportTracker'));
 const FacultyDashboard = lazy(() => import('./pages/FacultyDashboard'));
+const NoticesPage = lazy(() => import('./pages/NoticesPage'));
+const NoticeDetailPage = lazy(() => import('./pages/NoticeDetailPage'));
+const MapPage = lazy(() => import('./pages/MapPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Nested layouts
@@ -104,6 +107,7 @@ function MainLayout() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
 
             {/* Academics nested */}
             <Route path="/academics" element={<AcademicsLayout />}>
@@ -121,6 +125,7 @@ function MainLayout() {
               <Route path="scholarships" element={<ScholarshipsPage />} />
               <Route path="faqs" element={<FaqsPage />} />
             </Route>
+            <Route path="/admissions" element={<Navigate to="/admission" replace />} />
 
             {/* Campus nested */}
             <Route path="/campus" element={<CampusLayout />}>
@@ -135,6 +140,13 @@ function MainLayout() {
             <Route path="/placements" element={<Navigate to="/campus/placements" replace />} />
             <Route path="/gallery" element={<Navigate to="/campus/gallery" replace />} />
 
+            {/* Notices */}
+            <Route path="/notices" element={<NoticesPage />} />
+            <Route path="/notice/:id" element={<NoticeDetailPage />} />
+
+            {/* Map */}
+            <Route path="/map" element={<MapPage />} />
+
             <Route path="/contact" element={<Contact />} />
             <Route path="/faculty" element={<FacultyListPage />} />
             <Route path="/faculty/:id" element={<FacultyProfilePage />} />
@@ -147,6 +159,9 @@ function MainLayout() {
             <Route path="/career-roadmap" element={<CareerRoadmap />} />
             <Route path="/placement-readiness" element={<PlacementReadinessScore />} />
             <Route path="/transport-tracker" element={<TransportTracker />} />
+            
+            {/* Admin route */}
+            <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
 
             {/* Protected Routes */}
             <Route

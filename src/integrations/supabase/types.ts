@@ -14,46 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
-      internal_marks: {
+      gallery_events: {
         Row: {
+          category: string
           created_at: string
+          created_by: string | null
+          description: string | null
+          event_date: string | null
           id: string
-          internal_1: number | null
-          internal_2: number | null
-          internal_3: number | null
-          max_marks: number | null
-          semester: number
-          student_id: string
-          subject: string
+          location: string | null
+          organizer: string | null
+          tag: string | null
+          title: string
         }
         Insert: {
+          category?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string | null
           id?: string
-          internal_1?: number | null
-          internal_2?: number | null
-          internal_3?: number | null
-          max_marks?: number | null
-          semester?: number
-          student_id: string
-          subject: string
+          location?: string | null
+          organizer?: string | null
+          tag?: string | null
+          title: string
         }
         Update: {
+          category?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string | null
           id?: string
-          internal_1?: number | null
-          internal_2?: number | null
-          internal_3?: number | null
-          max_marks?: number | null
-          semester?: number
-          student_id?: string
-          subject?: string
+          location?: string | null
+          organizer?: string | null
+          tag?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      gallery_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          event_id: string
+          id: string
+          image_url: string
+          sort_order: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          image_url: string
+          sort_order?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          image_url?: string
+          sort_order?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "internal_marks_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "gallery_images_event_id_fkey"
+            columns: ["event_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "gallery_events"
             referencedColumns: ["id"]
           },
         ]
@@ -136,51 +166,6 @@ export type Database = {
           section?: string | null
           updated_at?: string
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      transport_routes: {
-        Row: {
-          bus_number: string
-          created_at: string
-          departure_time: string
-          distance_km: number | null
-          driver_name: string | null
-          driver_phone: string | null
-          estimated_arrival: string
-          fee_per_year: number | null
-          id: string
-          is_active: boolean | null
-          route_name: string
-          stops: Json
-        }
-        Insert: {
-          bus_number: string
-          created_at?: string
-          departure_time: string
-          distance_km?: number | null
-          driver_name?: string | null
-          driver_phone?: string | null
-          estimated_arrival: string
-          fee_per_year?: number | null
-          id?: string
-          is_active?: boolean | null
-          route_name: string
-          stops?: Json
-        }
-        Update: {
-          bus_number?: string
-          created_at?: string
-          departure_time?: string
-          distance_km?: number | null
-          driver_name?: string | null
-          driver_phone?: string | null
-          estimated_arrival?: string
-          fee_per_year?: number | null
-          id?: string
-          is_active?: boolean | null
-          route_name?: string
-          stops?: Json
         }
         Relationships: []
       }

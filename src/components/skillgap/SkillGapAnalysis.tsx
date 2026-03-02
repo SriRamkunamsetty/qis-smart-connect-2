@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Target, Sparkles, CheckCircle2, XCircle, BookOpen, Loader2, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const DREAM_COMPANIES = [
@@ -42,12 +41,8 @@ export default function SkillGapAnalysis() {
     setLoading(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('score-resume', {
-        body: { resume: { skills, company, branch }, action: 'skill-gap' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setResult(data);
+      // TODO: Replace with Firebase Cloud Function call
+      toast({ title: 'Coming Soon', description: 'AI Skill Gap Analysis will be available once Firebase functions are configured.' });
     } catch (err: any) {
       toast({ title: 'Analysis failed', description: err.message || 'Please try again.', variant: 'destructive' });
     } finally {

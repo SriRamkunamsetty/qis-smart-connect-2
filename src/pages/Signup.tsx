@@ -40,7 +40,7 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function Signup() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', role: 'student' as 'student' | 'admin' | 'faculty' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', role: 'Student' as 'Student' | 'Admin' | 'Faculty' });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -52,7 +52,7 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(form.name, form.email, form.password, form.role);
-      navigate(form.role === 'admin' ? '/admin-dashboard' : form.role === 'faculty' ? '/faculty/dashboard' : '/student-dashboard');
+      navigate(form.role === 'Admin' ? '/admin-dashboard' : form.role === 'Faculty' ? '/faculty/dashboard' : '/student-dashboard');
     } finally {
       setLoading(false);
     }
@@ -151,9 +151,9 @@ export default function Signup() {
                 onChange={e => update('role', e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
               >
-                <option value="student">🎓 Student</option>
-                <option value="faculty">👨‍🏫 Faculty</option>
-                <option value="admin">🧑‍💼 Admin / Staff</option>
+                <option value="Student">🎓 Student</option>
+                <option value="Faculty">👨‍🏫 Faculty</option>
+                <option value="Admin">🧑‍💼 Admin / Staff</option>
               </select>
             </div>
 
