@@ -45,8 +45,8 @@ export default function WeatherWidget({ compact = false }: { compact?: boolean }
 
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card border border-border text-xs">
-        <IconComponent className="w-3.5 h-3.5 text-primary" />
+      <div className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl glass-card border border-border text-xs">
+        <IconComponent className="w-4 h-4 text-primary" />
         <span className="font-medium">{weather.temp}°C</span>
         <span className="text-muted-foreground">{weather.location}</span>
       </div>

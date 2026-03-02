@@ -99,7 +99,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-3">
-            <WeatherWidget />
+            <WeatherWidget compact />
             <button onClick={() => setSearchOpen(true)} className="p-2 rounded-xl border border-border hover:bg-muted transition-colors" title="Search (Ctrl+K)">
               <Search className="w-4 h-4" />
             </button>
@@ -129,7 +129,7 @@ export default function Navbar() {
           <div className="lg:hidden glass-card border-t border-border mt-2 mx-4 rounded-2xl p-5 animate-fade-in">
             <nav className="flex flex-col gap-1">
               <div className="mb-4">
-                <WeatherWidget />
+                <WeatherWidget compact />
               </div>
               {navLinks.map(link =>
                 link.children ? (
