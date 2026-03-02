@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../../context/AuthContext';
-import PermissionDenied from './PermissionDenied';
 
 interface RoleProtectedRouteProps {
     children: ReactNode;
@@ -24,7 +23,7 @@ export default function RoleProtectedRoute({ children, allowedRoles }: RoleProte
     }
 
     if (user && !allowedRoles.includes(user.role)) {
-        return <PermissionDenied />;
+        return <Navigate to="/login" replace />;
     }
 
     return <>{children}</>;
