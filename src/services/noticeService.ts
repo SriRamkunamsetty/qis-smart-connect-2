@@ -1,5 +1,5 @@
 import { notices, Notice } from '../data/notices';
-import { collection, getDocs, query, where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 export type { Notice };
@@ -7,30 +7,42 @@ export type { Notice };
 const COLLECTION = 'circulars';
 
 export const noticeService = {
-  getNotices: async (category?: string, limitCount?: number): Promise<Notice[]> => {
-    try {
-      // Try Firebase first
-      const q = query(collection(db, COLLECTION), orderBy('date', 'desc'));
-      const snapshot = await getDocs(q);
-      if (snapshot.size > 0) {
+  subscribeToNotices: (callback: (notices: Notice[]) => void, category?: string, limitCount?: number) => {
+    const q = query(collection(db, COLLECTION), orderBy('date', 'desc'));
+
+    return onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) {
+        console.log('Seeding sample notices...');
+        for (const notice of notices) {
+          const { id, ...data } = notice; // omit dummy ID
+          await noticeService.createNotice(data);
+        }
+      } else {
         let result = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notice));
         if (category && category !== 'All') {
           result = result.filter(n => n.category === category);
         }
         if (limitCount) result = result.slice(0, limitCount);
-        return result;
+        callback(result);
       }
-    } catch {
-      // Firebase not available, fall through to local data
-    }
+    });
+  },
 
-    // Fallback to local data
-    let result = [...notices];
-    if (category && category !== 'All') {
-      result = result.filter(n => n.category === category);
-    }
-    if (limitCount) result = result.slice(0, limitCount);
-    return result;
+  getNotices: async (category?: string, limitCount?: number): Promise<Notice[]> => {
+    // Keep getNotices as placeholder wrapper for any existing static calls, but returning empty to force subscription usage where possible
+    console.warn("getNotices called. Please use subscribeToNotices in components.");
+    return [];
+  },
+
+  subscribeToNoticeById: (id: string, callback: (notice: Notice | null) => void) => {
+    const { doc, onSnapshot } = require('firebase/firestore');
+    return onSnapshot(doc(db, COLLECTION, id), (snap: any) => {
+      if (snap.exists()) {
+        callback({ id: snap.id, ...snap.data() } as Notice);
+      } else {
+        callback(notices.find(n => n.id === id) || null);
+      }
+    });
   },
 
   getNoticeById: async (id: string): Promise<Notice | null> => {

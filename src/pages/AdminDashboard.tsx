@@ -19,6 +19,11 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import AdminNotices from '@/components/admin/AdminNotices';
+import AdminGallery from '@/components/admin/AdminGallery';
+import AdminEvents from '@/components/admin/AdminEvents';
+import AdminPlacements from '@/components/admin/AdminPlacements';
+import { Calendar } from 'lucide-react';
 
 const sidebarItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -26,6 +31,7 @@ const sidebarItems = [
   { id: 'notices', label: 'Notices', icon: Bell },
   { id: 'applications', label: 'Applications', icon: Users },
   { id: 'gallery', label: 'Gallery', icon: Image },
+  { id: 'events', label: 'Events', icon: Calendar },
   { id: 'placements', label: 'Placements', icon: TrendingUp },
 ];
 
@@ -190,8 +196,8 @@ export default function AdminDashboard() {
                 key={id}
                 onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeTab === id
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent'
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
                   }`}
               >
                 <Icon className="w-4 h-4" /> {label}
@@ -386,8 +392,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Placeholder sections for the rest */}
-        {(activeTab === 'notices' || activeTab === 'applications' || activeTab === 'gallery' || activeTab === 'placements') && (
+        {activeTab === 'notices' && <AdminNotices />}
+        {activeTab === 'gallery' && <AdminGallery />}
+        {activeTab === 'events' && <AdminEvents />}
+        {activeTab === 'placements' && <AdminPlacements />}
+
+        {activeTab === 'applications' && (
           <div className="feature-card p-12 text-center animate-fade-in">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 text-primary font-bold">
               {activeTab.charAt(0).toUpperCase()}

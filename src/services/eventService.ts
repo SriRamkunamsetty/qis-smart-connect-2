@@ -1,7 +1,7 @@
 import { events, CampusEvent } from '../data/events';
 import {
   collection, getDocs, getDoc, doc, query, where, orderBy,
-  addDoc, updateDoc, deleteDoc, serverTimestamp,
+  addDoc, updateDoc, deleteDoc, serverTimestamp, onSnapshot
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebaseConfig';
@@ -11,26 +11,32 @@ export type { CampusEvent };
 const COLLECTION = 'events';
 
 export const eventService = {
-  getEvents: async (category?: string): Promise<CampusEvent[]> => {
-    try {
-      let q = query(collection(db, COLLECTION), orderBy('date', 'desc'));
-      if (category && category !== 'all') {
-        q = query(q, where('category', '==', category));
-      }
-      const snapshot = await getDocs(q);
-      if (snapshot.size > 0) {
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CampusEvent));
-      }
-    } catch {
-      // Firebase not available
+  subscribeToEvents: (callback: (events: CampusEvent[]) => void, category?: string) => {
+    let q = query(collection(db, COLLECTION), orderBy('date', 'desc'));
+    if (category && category !== 'all') {
+      q = query(q, where('category', '==', category));
     }
 
-    // Fallback to local data
-    let result = [...events];
-    if (category && category !== 'all') {
-      result = result.filter(e => e.category === category);
-    }
-    return result;
+    return onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) {
+        console.log('Seeding sample events...');
+        for (const evt of events) {
+          const { id, ...data } = evt;
+          await addDoc(collection(db, COLLECTION), {
+            ...data,
+            createdAt: serverTimestamp(),
+          });
+        }
+      } else {
+        const result = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as CampusEvent));
+        callback(result);
+      }
+    });
+  },
+
+  getEvents: async (category?: string): Promise<CampusEvent[]> => {
+    console.warn("getEvents called. Use subscribeToEvents instead.");
+    return [];
   },
 
   getEventById: async (id: string): Promise<CampusEvent | null> => {

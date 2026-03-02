@@ -11,7 +11,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 
-export type UserRole = 'Student' | 'Admin' | 'Faculty' | null;
+export type UserRole = 'student' | 'admin' | 'faculty' | null;
 
 interface User {
   uid: string;
@@ -49,18 +49,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Fetch additional user data from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        const userData = userDoc.data();
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        let userData = userDoc.data();
+
+        if (!userDoc.exists()) {
+          userData = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || 'User',
+            email: firebaseUser.email || '',
+            role: 'student',
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(userDocRef, userData);
+        } else if (!userData?.role) {
+          userData.role = 'student';
+          await setDoc(userDocRef, { role: 'student' }, { merge: true });
+        }
 
         // Use ID token to check for custom claims (roles)
         const idTokenResult = await firebaseUser.getIdTokenResult();
         const roleFromClaim = idTokenResult.claims.role as UserRole;
 
+        let finalRole = roleFromClaim || userData?.role || 'student';
+        if (typeof finalRole === 'string') {
+          finalRole = finalRole.toLowerCase() as UserRole;
+        }
+
         setUser({
           uid: firebaseUser.uid,
           name: userData?.name || firebaseUser.displayName || 'User',
           email: firebaseUser.email || '',
-          role: roleFromClaim || userData?.role || 'Student',
+          role: finalRole as UserRole,
           branch: userData?.branch
         });
       } else {

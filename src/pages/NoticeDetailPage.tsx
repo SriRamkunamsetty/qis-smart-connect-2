@@ -10,12 +10,18 @@ export default function NoticeDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    const fetch = async () => {
-      const data = await noticeService.getNoticeById(id);
-      setNotice(data);
-      setLoading(false);
+    let mounted = true;
+    setLoading(true);
+    const unsubscribe = noticeService.subscribeToNoticeById(id, (data) => {
+      if (mounted) {
+        setNotice(data);
+        setLoading(false);
+      }
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
     };
-    fetch();
   }, [id]);
 
   if (loading) {

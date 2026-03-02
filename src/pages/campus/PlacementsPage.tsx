@@ -1,19 +1,34 @@
-import { placements } from '@/data/dummyData';
+import { useState, useEffect } from 'react';
+import { placementService } from '@/services/placementService';
+import { placementStats as defaultStats } from '@/data/placements';
 import { companyData, getLogoUrl } from '@/data/companyData';
 import { TrendingUp, Award, Users, BarChart3 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import PlacementComparison from '@/components/placement/PlacementComparison';
 
 export default function PlacementsPage() {
+  const [stats, setStats] = useState(defaultStats);
+
+  useEffect(() => {
+    let mounted = true;
+    const unsubscribe = placementService.subscribeToStats((data) => {
+      if (mounted) setStats(data);
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    }
+  }, []);
+
   return (
     <div className="animate-fade-in space-y-10">
       {/* Highlights */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: TrendingUp, label: 'Placement Rate', value: '94%', color: 'text-green-500' },
-          { icon: Award, label: 'Highest Package', value: placements.highestPackage, color: 'text-amber-500' },
-          { icon: BarChart3, label: 'Avg Package', value: placements.avgPackage, color: 'text-blue-500' },
-          { icon: Users, label: 'Students Placed', value: `${placements.placedStudents}+`, color: 'text-primary' },
+          { icon: TrendingUp, label: 'Placement Rate', value: `${stats.placementRate}%`, color: 'text-green-500' },
+          { icon: Award, label: 'Highest Package', value: stats.highestPackage, color: 'text-amber-500' },
+          { icon: BarChart3, label: 'Avg Package', value: stats.avgPackage, color: 'text-blue-500' },
+          { icon: Users, label: 'Students Placed', value: `${stats.placedStudents}+`, color: 'text-primary' },
         ].map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="feature-card text-center">
             <Icon className={`w-6 h-6 ${color} mx-auto mb-2`} />

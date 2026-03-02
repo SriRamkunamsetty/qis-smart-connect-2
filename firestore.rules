@@ -1,51 +1,63 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
-    function isSignedIn() {
+    
+    // Check if the user is authenticated and is an admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Check if the user is authenticated
+    function isAuth() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-
-    function isFaculty() {
-      return isSignedIn() && request.auth.token.faculty == true;
-    }
-
-    function isSameUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // User profiles
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || isSameUser(userId);
-    }
-
-    // Student specific data
-    match /students/{studentId} {
-      allow read: if isFaculty() || isAdmin() || isSameUser(studentId);
-      allow write: if isAdmin() || (isFaculty() && request.auth.token.branch == resource.data.branch);
-    }
-
-    // Admissions and branch rules
-    match /admissions/{branchId} {
-      allow read: if true;
+    // Notices, Events, Gallery, Placements:
+    // Any authenticated user can read.
+    // Only Admin can write.
+    match /circulars/{document} {
+      allow read: if isAuth();
       allow write: if isAdmin();
     }
-
-    // Analytics and settings
-    match /settings/{settingId} {
-      allow read: if true;
+    match /events/{document} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+    match /gallery/{document} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+    match /placements/{document} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+    match /stats/{document} {
+      allow read: if isAuth();
       allow write: if isAdmin();
     }
     
-    // Default deny
+    // Users Collection rules
+    match /users/{userId} {
+      // Any authenticated user can read their own profile, Admins can read all.
+      // (Faculty might need to read all users too, but adhering to prompt: users can read own profile).
+      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+      
+      // Allow users to create their own record on signup
+      allow create: if isAuth() && request.auth.uid == userId;
+      
+      // Allow user to write/update their own profile EXCEPT role. Admin can update anything.
+      allow update: if isAuth() && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || 
+        isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // Fallback: Default lock
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if false;
     }
   }
 }

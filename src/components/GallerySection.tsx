@@ -1,9 +1,25 @@
-import { galleryImages } from '../data/dummyData';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Camera } from 'lucide-react';
+import { ChevronRight, Camera, Loader2 } from 'lucide-react';
+import { galleryService, GalleryImage } from '../services/galleryService';
 
 export default function GallerySection() {
-  const preview = galleryImages.slice(0, 4);
+  const [preview, setPreview] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const unsubscribe = galleryService.subscribeToGallery((data) => {
+      if (mounted) {
+        setPreview(data);
+        setLoading(false);
+      }
+    }, 4);
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <section className="py-16">

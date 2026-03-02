@@ -159,7 +159,7 @@ function MainLayout() {
             <Route path="/career-roadmap" element={<CareerRoadmap />} />
             <Route path="/placement-readiness" element={<PlacementReadinessScore />} />
             <Route path="/transport-tracker" element={<TransportTracker />} />
-            
+
             {/* Admin route */}
             <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
 
@@ -167,7 +167,7 @@ function MainLayout() {
             <Route
               path="/student-dashboard"
               element={
-                <RoleProtectedRoute allowedRoles={['Student', 'Admin']}>
+                <RoleProtectedRoute allowedRoles={['student', 'admin']}>
                   <StudentDashboard />
                 </RoleProtectedRoute>
               }
@@ -175,7 +175,7 @@ function MainLayout() {
             <Route
               path="/admin-dashboard"
               element={
-                <RoleProtectedRoute allowedRoles={['Admin']}>
+                <RoleProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
                 </RoleProtectedRoute>
               }
@@ -183,7 +183,7 @@ function MainLayout() {
             <Route
               path="/faculty-dashboard"
               element={
-                <RoleProtectedRoute allowedRoles={['Faculty', 'Admin']}>
+                <RoleProtectedRoute allowedRoles={['faculty', 'admin']}>
                   <FacultyDashboard />
                 </RoleProtectedRoute>
               }

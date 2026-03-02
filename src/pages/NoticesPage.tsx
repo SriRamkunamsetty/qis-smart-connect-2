@@ -21,13 +21,19 @@ export default function NoticesPage() {
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      const data = await noticeService.getNotices(filter);
-      setNotices(data);
-      setLoading(false);
+    let mounted = true;
+    setLoading(true);
+    const unsubscribe = noticeService.subscribeToNotices((data) => {
+      if (mounted) {
+        setNotices(data);
+        setLoading(false);
+      }
+    }, filter);
+
+    return () => {
+      mounted = false;
+      unsubscribe();
     };
-    fetch();
   }, [filter]);
 
   return (

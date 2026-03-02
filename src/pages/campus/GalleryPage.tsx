@@ -19,35 +19,37 @@ export default function GalleryPage() {
   const [lightbox, setLightbox] = useState<null | GalleryImage>(null);
 
   useEffect(() => {
+    let mounted = true;
     setLoading(true);
-    const fetchEvents = async () => {
-      try {
-        const fetched = await eventService.getEvents(activeCategory === 'all' ? undefined : activeCategory);
-        setEvents(fetched);
-      } catch {
-        setEvents([]);
+    const cat = activeCategory === 'all' ? undefined : activeCategory;
+    const unsubscribe = eventService.subscribeToEvents((data) => {
+      if (mounted) {
+        setEvents(data);
+        setLoading(false);
       }
-      setLoading(false);
-    };
-    fetchEvents();
+    }, cat);
+    return () => {
+      mounted = false;
+      unsubscribe();
+    }
   }, [activeCategory]);
 
   // Use event images if available, otherwise use local gallery
   const galleryImages: GalleryImage[] = events.length > 0
     ? events.flatMap(event =>
-        event.images.map((url, idx) => ({
-          id: `${event.id}-${idx}`,
-          src: url,
-          title: event.title,
-          category: event.category
-        }))
-      )
+      event.images.map((url, idx) => ({
+        id: `${event.id}-${idx}`,
+        src: url,
+        title: event.title,
+        category: event.category
+      }))
+    )
     : localGalleryImages.map(img => ({
-        id: String(img.id),
-        src: img.src,
-        title: img.title,
-        category: img.category,
-      }));
+      id: String(img.id),
+      src: img.src,
+      title: img.title,
+      category: img.category,
+    }));
 
   return (
     <div className="animate-fade-in min-h-[400px]">

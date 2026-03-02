@@ -1,10 +1,25 @@
-import { placements } from '../data/dummyData';
+import { useState, useEffect } from 'react';
+import { placementService } from '../services/placementService';
+import { placementStats as defaultStats } from '../data/placements';
 import { companyData, getLogoUrl } from '../data/companyData';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Award, Users } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function PlacementSection() {
+  const [stats, setStats] = useState(defaultStats);
+
+  useEffect(() => {
+    let mounted = true;
+    const unsubscribe = placementService.subscribeToStats((data) => {
+      if (mounted) setStats(data);
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    }
+  }, []);
+
   return (
     <section className="py-16">
       <div className="container mx-auto">
@@ -16,9 +31,9 @@ export default function PlacementSection() {
         {/* Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
           {[
-            { icon: TrendingUp, label: 'Placement Rate', value: '94%', color: 'text-green-500' },
-            { icon: Award, label: 'Highest Package', value: placements.highestPackage, color: 'text-amber-500' },
-            { icon: Users, label: 'Students Placed', value: `${placements.placedStudents}+`, color: 'text-primary' },
+            { icon: TrendingUp, label: 'Placement Rate', value: `${stats.placementRate}%`, color: 'text-green-500' },
+            { icon: Award, label: 'Highest Package', value: stats.highestPackage, color: 'text-amber-500' },
+            { icon: Users, label: 'Students Placed', value: `${stats.placedStudents}+`, color: 'text-primary' },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="feature-card flex items-center gap-5">
               <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">

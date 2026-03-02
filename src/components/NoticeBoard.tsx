@@ -19,22 +19,17 @@ export default function NoticeBoard() {
   useEffect(() => {
     let mounted = true;
 
-    const fetchNotices = async () => {
-      try {
-        const fetchedNotices = await noticeService.getNotices('All', 5);
-        if (mounted) {
-          setNotices(fetchedNotices);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Failed to fetch notices:", error);
-        if (mounted) setLoading(false);
+    const unsubscribe = noticeService.subscribeToNotices((fetchedNotices) => {
+      if (mounted) {
+        setNotices(fetchedNotices);
+        setLoading(false);
       }
+    }, 'All', 5);
+
+    return () => {
+      mounted = false;
+      unsubscribe();
     };
-
-    fetchNotices();
-
-    return () => { mounted = false; };
   }, []);
 
   return (
