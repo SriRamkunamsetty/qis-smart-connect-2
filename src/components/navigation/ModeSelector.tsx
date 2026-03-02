@@ -4,9 +4,10 @@ import { Car, Footprints, Bike, Bus } from 'lucide-react';
 interface ModeSelectorProps {
     currentMode: google.maps.TravelMode;
     onModeChange: (mode: google.maps.TravelMode) => void;
+    modeDurations?: Record<string, string>;
 }
 
-export const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeChange }) => {
+export const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeChange, modeDurations }) => {
     const modes = [
         { label: 'Driving', mode: 'DRIVING' as google.maps.TravelMode, icon: Car },
         { label: 'Walking', mode: 'WALKING' as google.maps.TravelMode, icon: Footprints },
@@ -27,6 +28,9 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({ currentMode, onModeC
                 >
                     <Icon className="w-5 h-5 mb-1" />
                     <span className="text-[10px] font-medium">{label}</span>
+                    {modeDurations && modeDurations[mode] && (
+                        <span className="text-[9px] opacity-80 mt-0.5">{modeDurations[mode]}</span>
+                    )}
                 </button>
             ))}
         </div>

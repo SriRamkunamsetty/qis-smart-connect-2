@@ -7,6 +7,7 @@ const QISCET_LOCATION = { lat: 15.4980, lng: 80.0535 };
 interface MapComponentProps {
     travelMode: google.maps.TravelMode | string;
     onRouteInfoUpdate: (info: { distance: string; duration: string; arrivalTime: string }) => void;
+    onModeDurationsUpdate?: (durations: Record<string, string>) => void;
     isNavigating?: boolean;
 }
 
@@ -16,7 +17,7 @@ const mapContainerStyle = {
     borderRadius: '1rem'
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ travelMode, onRouteInfoUpdate, isNavigating }) => {
+export const MapComponent: React.FC<MapComponentProps> = ({ travelMode, onRouteInfoUpdate, onModeDurationsUpdate, isNavigating }) => {
     const { isLoaded } = useLoadScript({
         googleMapsApiKey: MAPS_API_KEY,
         libraries: GOOGLE_LIBRARIES as any,
@@ -92,6 +93,48 @@ export const MapComponent: React.FC<MapComponentProps> = ({ travelMode, onRouteI
             }
         );
     }, [isLoaded, userLocation, travelMode, onRouteInfoUpdate]);
+
+    // Calculate Durations for All Modes
+    useEffect(() => {
+        if (!isLoaded || !userLocation || !onModeDurationsUpdate) return;
+
+        const directionsService = new window.google.maps.DirectionsService();
+        const modes = ['DRIVING', 'WALKING', 'BICYCLING', 'TRANSIT'] as google.maps.TravelMode[];
+
+        const fetchDuration = (mode: google.maps.TravelMode): Promise<{ mode: string, duration: string } | null> => {
+            return new Promise((resolve) => {
+                directionsService.route(
+                    {
+                        origin: userLocation,
+                        destination: QISCET_LOCATION,
+                        travelMode: mode,
+                    },
+                    (result, status) => {
+                        if (status === window.google.maps.DirectionsStatus.OK && result) {
+                            const duration = result.routes[0]?.legs[0]?.duration?.text;
+                            if (duration) {
+                                resolve({ mode, duration });
+                            } else {
+                                resolve(null);
+                            }
+                        } else {
+                            resolve(null);
+                        }
+                    }
+                );
+            });
+        };
+
+        Promise.all(modes.map(fetchDuration)).then(results => {
+            const durations: Record<string, string> = {};
+            results.forEach(res => {
+                if (res) {
+                    durations[res.mode] = res.duration;
+                }
+            });
+            onModeDurationsUpdate(durations);
+        });
+    }, [isLoaded, userLocation, onModeDurationsUpdate]);
 
     if (!isLoaded) {
         return (

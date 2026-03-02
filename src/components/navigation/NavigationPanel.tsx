@@ -13,6 +13,7 @@ export const NavigationPanel: React.FC = () => {
         duration: '',
         arrivalTime: '',
     });
+    const [modeDurations, setModeDurations] = useState<Record<string, string>>({});
 
     const openInGoogleMaps = () => {
         const destination = '15.4980,80.0535';
@@ -34,11 +35,12 @@ export const NavigationPanel: React.FC = () => {
                 <MapComponent
                     travelMode={travelMode as google.maps.TravelMode}
                     onRouteInfoUpdate={setRouteInfo}
+                    onModeDurationsUpdate={setModeDurations}
                     isNavigating={isNavigating}
                 />
 
                 <div className="absolute top-4 left-4 right-4 md:hidden">
-                    <ModeSelector currentMode={travelMode as google.maps.TravelMode} onModeChange={(mode) => setTravelMode(mode)} />
+                    <ModeSelector currentMode={travelMode as google.maps.TravelMode} onModeChange={(mode) => setTravelMode(mode)} modeDurations={modeDurations} />
                 </div>
             </div>
 
@@ -54,7 +56,7 @@ export const NavigationPanel: React.FC = () => {
                     <div className="space-y-6">
                         <div className="hidden md:block">
                             <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wider">Travel Mode</p>
-                            <ModeSelector currentMode={travelMode as google.maps.TravelMode} onModeChange={(mode) => setTravelMode(mode)} />
+                            <ModeSelector currentMode={travelMode as google.maps.TravelMode} onModeChange={(mode) => setTravelMode(mode)} modeDurations={modeDurations} />
                         </div>
 
                         <div>
