@@ -86,7 +86,7 @@ export default function ResumeBuilderPage() {
 
   // Role-based template filtering
   const filteredTemplates = useMemo(() => {
-    if (user?.role === 'Faculty') {
+    if (user?.role === 'faculty') {
       return templates.filter(t => t.forRole === 'faculty' || t.key === 'corporate' || t.key === 'minimal');
     }
     return templates;

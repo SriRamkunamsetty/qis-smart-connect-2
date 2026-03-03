@@ -50,8 +50,8 @@ export default function Navbar() {
   };
 
   const getDashboardPath = () => {
-    if (user?.role === 'Admin') return '/admin-dashboard';
-    if (user?.role === 'Faculty') return '/faculty-dashboard';
+    if (user?.role === 'admin') return '/admin-dashboard';
+    if (user?.role === 'faculty') return '/faculty-dashboard';
     return '/student-dashboard';
   };
 

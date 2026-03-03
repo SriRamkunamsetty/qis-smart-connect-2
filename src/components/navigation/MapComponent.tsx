@@ -1,169 +1,215 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { GoogleMap, Marker, DirectionsRenderer, useLoadScript } from '@react-google-maps/api';
-import { MAPS_API_KEY, GOOGLE_LIBRARIES } from '../../config/googleMaps';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const QISCET_LOCATION = { lat: 15.4980, lng: 80.0535 };
 
+// Fix default Leaflet marker icons
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const userIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const campusIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+L.Marker.prototype.options.icon = defaultIcon;
+
 interface MapComponentProps {
-    travelMode: google.maps.TravelMode | string;
-    onRouteInfoUpdate: (info: { distance: string; duration: string; arrivalTime: string }) => void;
-    onModeDurationsUpdate?: (durations: Record<string, string>) => void;
-    isNavigating?: boolean;
+  travelMode: string;
+  onRouteInfoUpdate: (info: { distance: string; duration: string; arrivalTime: string }) => void;
+  onModeDurationsUpdate?: (durations: Record<string, string>) => void;
+  isNavigating?: boolean;
 }
 
-const mapContainerStyle = {
-    width: '100%',
-    height: '100%',
-    borderRadius: '1rem'
+const OSRM_PROFILES: Record<string, string> = {
+  DRIVING: 'car',
+  WALKING: 'foot',
+  BICYCLING: 'bike',
+  TRANSIT: 'car', // OSRM has no transit; approximate with car
 };
 
-export const MapComponent: React.FC<MapComponentProps> = ({ travelMode, onRouteInfoUpdate, onModeDurationsUpdate, isNavigating }) => {
-    const { isLoaded } = useLoadScript({
-        googleMapsApiKey: MAPS_API_KEY,
-        libraries: GOOGLE_LIBRARIES as any,
-    });
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)} sec`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.round((seconds % 3600) / 60);
+  return `${hours} hr ${mins} min`;
+}
 
-    const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-    const watchIdRef = useRef<number | null>(null);
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
 
-    // Initial Location Grab
-    useEffect(() => {
-        if (!navigator.geolocation) return;
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-            },
-            (error) => console.error("Geolocation Error: ", error),
-            { enableHighAccuracy: true }
-        );
-    }, []);
-
-    // Active Navigation Watching
-    useEffect(() => {
-        if (isNavigating && navigator.geolocation) {
-            watchIdRef.current = navigator.geolocation.watchPosition(
-                (position) => {
-                    setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-                },
-                (error) => console.error("WatchPosition Error: ", error),
-                { enableHighAccuracy: true, maximumAge: 0 }
-            );
-        } else if (!isNavigating && watchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(watchIdRef.current);
-            watchIdRef.current = null;
-        }
-
-        return () => {
-            if (watchIdRef.current !== null) {
-                navigator.geolocation.clearWatch(watchIdRef.current);
-            }
-        };
-    }, [isNavigating]);
-
-    // Calculate Route
-    useEffect(() => {
-        if (!isLoaded || !userLocation) return;
-
-        const directionsService = new window.google.maps.DirectionsService();
-
-        directionsService.route(
-            {
-                origin: userLocation,
-                destination: QISCET_LOCATION,
-                travelMode: typeof travelMode === 'string' ? travelMode as google.maps.TravelMode : travelMode,
-            },
-            (result, status) => {
-                if (status === window.google.maps.DirectionsStatus.OK && result) {
-                    setDirections(result);
-                    const route = result.routes[0].legs[0];
-                    if (route) {
-                        const now = new Date();
-                        const arrivalTime = new Date(now.getTime() + (route.duration?.value || 0) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        onRouteInfoUpdate({
-                            distance: route.distance?.text || '',
-                            duration: route.duration?.text || '',
-                            arrivalTime,
-                        });
-                    }
-                } else {
-                    console.error(`Error fetching directions: ${status}`);
-                }
-            }
-        );
-    }, [isLoaded, userLocation, travelMode, onRouteInfoUpdate]);
-
-    // Calculate Durations for All Modes
-    useEffect(() => {
-        if (!isLoaded || !userLocation || !onModeDurationsUpdate) return;
-
-        const directionsService = new window.google.maps.DirectionsService();
-        const modes = ['DRIVING', 'WALKING', 'BICYCLING', 'TRANSIT'] as google.maps.TravelMode[];
-
-        const fetchDuration = (mode: google.maps.TravelMode): Promise<{ mode: string, duration: string } | null> => {
-            return new Promise((resolve) => {
-                directionsService.route(
-                    {
-                        origin: userLocation,
-                        destination: QISCET_LOCATION,
-                        travelMode: mode,
-                    },
-                    (result, status) => {
-                        if (status === window.google.maps.DirectionsStatus.OK && result) {
-                            const duration = result.routes[0]?.legs[0]?.duration?.text;
-                            if (duration) {
-                                resolve({ mode, duration });
-                            } else {
-                                resolve(null);
-                            }
-                        } else {
-                            resolve(null);
-                        }
-                    }
-                );
-            });
-        };
-
-        Promise.all(modes.map(fetchDuration)).then(results => {
-            const durations: Record<string, string> = {};
-            results.forEach(res => {
-                if (res) {
-                    durations[res.mode] = res.duration;
-                }
-            });
-            onModeDurationsUpdate(durations);
-        });
-    }, [isLoaded, userLocation, onModeDurationsUpdate]);
-
-    if (!isLoaded) {
-        return (
-            <div className="w-full h-full flex items-center justify-center bg-muted/20 rounded-2xl md:rounded-3xl">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm font-medium text-muted-foreground">Loading Map System...</p>
-                </div>
-            </div>
-        );
+async function fetchOSRMRoute(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number },
+  profile: string
+): Promise<{ distance: number; duration: number; geometry: [number, number][] } | null> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=polyline`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes?.[0]) {
+      const route = data.routes[0];
+      return {
+        distance: route.distance,
+        duration: route.duration,
+        geometry: decodePolyline(route.geometry),
+      };
     }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
-    return (
-        <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            zoom={15}
-            center={userLocation || QISCET_LOCATION}
-            options={{
-                disableDefaultUI: true,
-                zoomControl: true,
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false
-            }}
-        >
-            {userLocation && <Marker position={userLocation} icon="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" />}
-            <Marker position={QISCET_LOCATION} title="QISCET Campus" />
+// Component to fit map bounds to route
+function MapBoundsUpdater({ userLocation, routeGeometry }: { userLocation: { lat: number; lng: number } | null; routeGeometry: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (routeGeometry.length > 0) {
+      const bounds = L.latLngBounds(routeGeometry.map(([lat, lng]) => [lat, lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (userLocation) {
+      map.setView([userLocation.lat, userLocation.lng], 13);
+    }
+  }, [map, userLocation, routeGeometry]);
+  return null;
+}
 
-            {directions && <DirectionsRenderer directions={directions} options={{ suppressMarkers: true }} />}
-        </GoogleMap>
+export const MapComponent: React.FC<MapComponentProps> = ({ travelMode, onRouteInfoUpdate, onModeDurationsUpdate, isNavigating }) => {
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<[number, number][]>([]);
+  const watchIdRef = useRef<number | null>(null);
+
+  // Get initial location
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => console.error('Geolocation error:', err),
+      { enableHighAccuracy: true }
     );
+  }, []);
+
+  // Watch position when navigating
+  useEffect(() => {
+    if (isNavigating && navigator.geolocation) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => console.error('Watch error:', err),
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+    } else if (!isNavigating && watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    return () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+    };
+  }, [isNavigating]);
+
+  // Fetch route for current mode
+  useEffect(() => {
+    if (!userLocation) return;
+    const profile = OSRM_PROFILES[travelMode] || 'car';
+    fetchOSRMRoute(userLocation, QISCET_LOCATION, profile).then((result) => {
+      if (result) {
+        setRouteGeometry(result.geometry);
+        const now = new Date();
+        const arrival = new Date(now.getTime() + result.duration * 1000);
+        onRouteInfoUpdate({
+          distance: formatDistance(result.distance),
+          duration: formatDuration(result.duration),
+          arrivalTime: arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    });
+  }, [userLocation, travelMode, onRouteInfoUpdate]);
+
+  // Fetch durations for all modes
+  useEffect(() => {
+    if (!userLocation || !onModeDurationsUpdate) return;
+    const modes = ['DRIVING', 'WALKING', 'BICYCLING', 'TRANSIT'];
+    Promise.all(
+      modes.map(async (mode) => {
+        const profile = OSRM_PROFILES[mode] || 'car';
+        const result = await fetchOSRMRoute(userLocation, QISCET_LOCATION, profile);
+        return { mode, duration: result ? formatDuration(result.duration) : '--' };
+      })
+    ).then((results) => {
+      const durations: Record<string, string> = {};
+      results.forEach((r) => { durations[r.mode] = r.duration; });
+      onModeDurationsUpdate(durations);
+    });
+  }, [userLocation, onModeDurationsUpdate]);
+
+  const center = userLocation || QISCET_LOCATION;
+
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <MapContainer
+        center={[center.lat, center.lng]}
+        zoom={13}
+        style={{ width: '100%', height: '100%', borderRadius: '1rem' }}
+        zoomControl={true}
+        attributionControl={false}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <MapBoundsUpdater userLocation={userLocation} routeGeometry={routeGeometry} />
+
+        {userLocation && (
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+            <Popup>Your Location</Popup>
+          </Marker>
+        )}
+
+        <Marker position={[QISCET_LOCATION.lat, QISCET_LOCATION.lng]} icon={campusIcon}>
+          <Popup>QISCET Campus</Popup>
+        </Marker>
+
+        {routeGeometry.length > 0 && (
+          <Polyline positions={routeGeometry} pathOptions={{ color: '#6366f1', weight: 5, opacity: 0.8 }} />
+        )}
+      </MapContainer>
+    </div>
+  );
 };
