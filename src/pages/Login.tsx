@@ -1,34 +1,72 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useEffect } from 'react';
+import { Eye, EyeOff, GraduationCap, Loader2, ShieldCheck, BookOpen, UserCog } from 'lucide-react';
+import { useAuth, UserRole } from '../context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+import { toast } from 'sonner';
+
+const roles: { value: UserRole; label: string; icon: React.ReactNode; desc: string }[] = [
+  { value: 'student', label: 'Student', icon: <GraduationCap className="w-5 h-5" />, desc: 'Access your dashboard' },
+  { value: 'faculty', label: 'Faculty', icon: <BookOpen className="w-5 h-5" />, desc: 'Manage your classes' },
+  { value: 'admin', label: 'Admin', icon: <UserCog className="w-5 h-5" />, desc: 'Full system access' },
+];
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const [error, setError] = useState('');
+  const { login, loginWithGoogle, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      const targetRole = user.role?.toLowerCase() || 'student';
-      navigate(targetRole === 'admin' ? '/admin-dashboard' : targetRole === 'faculty' ? '/faculty-dashboard' : '/student-dashboard');
+      const r = user.role?.toLowerCase() || 'student';
+      navigate(r === 'admin' ? '/admin-dashboard' : r === 'faculty' ? '/faculty-dashboard' : '/student-dashboard');
     }
   }, [user, navigate]);
+
+  const redirectByRole = (role: string) => {
+    const r = role.toLowerCase();
+    navigate(r === 'admin' ? '/admin-dashboard' : r === 'faculty' ? '/faculty-dashboard' : '/student-dashboard');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      await login(email, password);
-      // navigation handled by useEffect 
+      const cred = await login(email, password);
+      // Validate role against Firestore
+      const uid = cred?.user?.uid;
+      if (uid) {
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const firestoreRole = userDoc.data()?.role?.toLowerCase();
+        if (firestoreRole && firestoreRole !== selectedRole) {
+          setError('Access denied for this role.');
+          setLoading(false);
+          return;
+        }
+      }
+      // Redirect handled by useEffect
     } catch (err: any) {
+      setError(err?.message || 'Login failed. Please check your credentials.');
       setLoading(false);
-      // Auth errors handled by toast in context or here
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      setError(err?.message || 'Google login failed.');
+      setLoading(false);
     }
   };
 
@@ -51,6 +89,32 @@ export default function Login() {
         </div>
 
         <div className="feature-card p-8">
+          {/* Role Selector Tabs */}
+          <div className="flex gap-2 mb-6">
+            {roles.map(r => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => { setSelectedRole(r.value); setError(''); }}
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all duration-200 text-sm font-medium ${
+                  selectedRole === r.value
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border bg-muted/50 text-muted-foreground hover:border-primary/30 hover:bg-muted'
+                }`}
+              >
+                {r.icon}
+                <span>{r.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center gap-2 text-sm text-destructive">
+              <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium mb-2">Email Address</label>
@@ -100,7 +164,7 @@ export default function Login() {
 
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in...' : `Sign In as ${roles.find(r => r.value === selectedRole)?.label}`}
             </button>
 
             <div className="relative flex items-center gap-3">
@@ -111,6 +175,8 @@ export default function Login() {
 
             <button
               type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
               className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-border hover:bg-muted transition-colors text-sm font-medium"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
