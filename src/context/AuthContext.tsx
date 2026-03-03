@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  User as FirebaseUser
+  UserCredential
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
@@ -25,8 +25,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  login: (email: string, password: string) => Promise<UserCredential>;
+  loginWithGoogle: () => Promise<UserCredential>;
   logout: () => void;
   signup: (name: string, email: string, password: string, role: UserRole, branch?: string) => Promise<void>;
 }
@@ -35,8 +35,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   loading: true,
-  login: async () => { },
-  loginWithGoogle: async () => { },
+  login: async () => ({} as UserCredential),
+  loginWithGoogle: async () => ({} as UserCredential),
   logout: () => { },
   signup: async () => { },
 });
@@ -48,7 +48,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Fetch additional user data from Firestore
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
         let userData = userDoc.data();
@@ -67,14 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await setDoc(userDocRef, { role: 'student' }, { merge: true });
         }
 
-        // Use ID token to check for custom claims (roles)
-        const idTokenResult = await firebaseUser.getIdTokenResult();
-        const roleFromClaim = idTokenResult.claims.role as UserRole;
-
-        let finalRole = roleFromClaim || userData?.role || 'student';
-        if (typeof finalRole === 'string') {
-          finalRole = finalRole.toLowerCase() as UserRole;
-        }
+        let finalRole = (userData?.role || 'student') as string;
+        finalRole = finalRole.toLowerCase();
 
         setUser({
           uid: firebaseUser.uid,
@@ -92,13 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  const login = async (email: string, password: string): Promise<UserCredential> => {
+    return await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (): Promise<UserCredential> => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    return await signInWithPopup(auth, provider);
   };
 
   const logout = async () => {
@@ -108,15 +101,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (name: string, email: string, password: string, role: UserRole, branch?: string) => {
     const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-
-    // Initial Firestore record (Security Rules will allow this)
     await setDoc(doc(db, 'users', firebaseUser.uid), {
       uid: firebaseUser.uid,
       name,
       email,
-      role,
+      role: role || 'student',
       branch,
-      createdAt: new Promise((resolve) => resolve(new Date())) // Simplified for this context
+      createdAt: new Date().toISOString()
     });
   };
 

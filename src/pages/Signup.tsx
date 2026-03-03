@@ -40,7 +40,7 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function Signup() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', role: 'student' as 'student' | 'admin' | 'faculty' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -51,8 +51,9 @@ export default function Signup() {
     if (form.password !== form.confirm) return;
     setLoading(true);
     try {
-      await signup(form.name, form.email, form.password, form.role);
-      navigate(form.role === 'admin' ? '/admin-dashboard' : form.role === 'faculty' ? '/faculty-dashboard' : '/student-dashboard');
+      // Always signup as student — only admin can change roles later
+      await signup(form.name, form.email, form.password, 'student');
+      navigate('/student-dashboard');
     } finally {
       setLoading(false);
     }
@@ -143,17 +144,8 @@ export default function Signup() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">I am a...</label>
-              <select
-                value={form.role}
-                onChange={e => update('role', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
-              >
-                <option value="student">🎓 Student</option>
-                <option value="faculty">👨‍🏫 Faculty</option>
-                <option value="admin">🧑‍💼 Admin / Staff</option>
-              </select>
+            <div className="p-3 rounded-xl bg-muted/50 border border-border text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Note:</span> All new accounts are created as <span className="font-semibold text-primary">Student</span> accounts. Role changes can only be made by an administrator.
             </div>
 
             <button
