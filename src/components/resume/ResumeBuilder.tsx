@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
-import { Download, FileText, Eye, EyeOff, Image, GripVertical, Sparkles, Loader2, AlertTriangle, Palette, Type } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Download, FileText, Eye, EyeOff, Image, GripVertical, Sparkles, Loader2, AlertTriangle, Palette, Type, Save, FolderOpen, Trash2, ShieldCheck } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import ResumePreview from './ResumePreview';
 import type { ResumeData, SectionConfig, TemplateKey } from './ResumePreview';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-// AI features will use Firebase Cloud Functions
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { resumeService, calculateResumeScore, SavedResume } from '@/services/resumeService';
 
 const defaultSections: ResumeData['sections'] = {
   summary: { visible: true, order: 0 },
@@ -70,6 +70,8 @@ interface AIScore {
   suggestions: string[];
   missingKeywords: string[];
   bulletImprovements: string[];
+  atsScore: number;
+  atsSuggestions: string[];
 }
 
 export default function ResumeBuilderPage() {
@@ -81,8 +83,22 @@ export default function ResumeBuilderPage() {
   const [scoring, setScoring] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
+  const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
+  const [resumeTitle, setResumeTitle] = useState('My Resume');
+  const [showSaved, setShowSaved] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Load saved resumes
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsubscribe = resumeService.getUserResumes(user.uid, (resumes) => {
+      setSavedResumes(resumes);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   // Role-based template filtering
   const filteredTemplates = useMemo(() => {
@@ -149,8 +165,17 @@ export default function ResumeBuilderPage() {
   const scoreResume = async () => {
     setScoring(true);
     try {
-      // TODO: Replace with Firebase Cloud Function call
-      toast({ title: 'Coming Soon', description: 'AI Resume Scoring will be available once Firebase functions are configured.' });
+      const result = calculateResumeScore(data);
+      setAiScore({
+        score: result.score,
+        breakdown: result.breakdown,
+        suggestions: result.suggestions,
+        missingKeywords: [],
+        bulletImprovements: [],
+        atsScore: result.atsScore,
+        atsSuggestions: result.atsSuggestions,
+      });
+      toast({ title: `Resume Score: ${result.score}/100`, description: `ATS Score: ${result.atsScore}%` });
     } catch (err: any) {
       toast({ title: 'Scoring failed', description: err.message, variant: 'destructive' });
     } finally {
@@ -161,12 +186,47 @@ export default function ResumeBuilderPage() {
   const enhanceResume = async () => {
     setEnhancing(true);
     try {
-      // TODO: Replace with Firebase Cloud Function call
-      toast({ title: 'Coming Soon', description: 'AI Resume Enhancement will be available once Firebase functions are configured.' });
+      toast({ title: 'Coming Soon', description: 'AI Resume Enhancement will be available soon.' });
     } catch (err: any) {
       toast({ title: 'Enhancement failed', description: err.message, variant: 'destructive' });
     } finally {
       setEnhancing(false);
+    }
+  };
+
+  const handleSaveResume = async () => {
+    if (!user?.uid) {
+      toast({ title: 'Please log in', description: 'You need to be logged in to save resumes.', variant: 'destructive' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const id = await resumeService.saveResume(user.uid, resumeTitle, data, template, currentResumeId || undefined);
+      setCurrentResumeId(id);
+      toast({ title: 'Resume saved!' });
+    } catch (err: any) {
+      toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLoadResume = (resume: SavedResume) => {
+    setData(resume.data);
+    setTemplate(resume.template as TemplateKey);
+    setCurrentResumeId(resume.id);
+    setResumeTitle(resume.title);
+    setShowSaved(false);
+    toast({ title: `Loaded: ${resume.title}` });
+  };
+
+  const handleDeleteResume = async (id: string) => {
+    try {
+      await resumeService.deleteResume(id);
+      if (currentResumeId === id) setCurrentResumeId(null);
+      toast({ title: 'Resume deleted' });
+    } catch (err: any) {
+      toast({ title: 'Delete failed', variant: 'destructive' });
     }
   };
 
@@ -493,6 +553,75 @@ export default function ResumeBuilderPage() {
                 )}
               </div>
             )}
+
+            {/* ATS Score */}
+            {aiScore && aiScore.atsScore !== undefined && (
+              <div className="feature-card p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <ShieldCheck className="w-5 h-5 text-primary" />
+                  <div>
+                    <h4 className="font-grotesk font-semibold text-sm">ATS Compatibility</h4>
+                    <p className="text-xs text-muted-foreground">Score: {aiScore.atsScore}%</p>
+                  </div>
+                </div>
+                <div className="w-full h-3 bg-muted rounded-full overflow-hidden mb-3">
+                  <div
+                    className={`h-full rounded-full transition-all ${aiScore.atsScore >= 70 ? 'bg-green-500' : aiScore.atsScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${aiScore.atsScore}%` }}
+                  />
+                </div>
+                {aiScore.atsSuggestions && aiScore.atsSuggestions.length > 0 && (
+                  <ul className="space-y-1">
+                    {aiScore.atsSuggestions.map((s, i) => (
+                      <li key={i} className="text-xs text-muted-foreground">⚠ {s}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Save/Load Resume */}
+            <div className="feature-card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold">Save & Manage</h3>
+                {savedResumes.length > 0 && (
+                  <button onClick={() => setShowSaved(!showSaved)} className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <FolderOpen className="w-3.5 h-3.5" /> {showSaved ? 'Hide' : `Load (${savedResumes.length})`}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={resumeTitle}
+                  onChange={e => setResumeTitle(e.target.value)}
+                  placeholder="Resume title..."
+                  className="flex-1 px-3 py-2 rounded-xl bg-muted border border-border focus:border-primary outline-none text-sm"
+                />
+                <button onClick={handleSaveResume} disabled={saving} className="btn-primary text-xs px-4">
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Save
+                </button>
+              </div>
+              {currentResumeId && (
+                <p className="text-xs text-muted-foreground">Editing: <span className="text-primary font-medium">{resumeTitle}</span></p>
+              )}
+              {showSaved && savedResumes.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                  {savedResumes.map(r => (
+                    <div key={r.id} className={`flex items-center justify-between p-2.5 rounded-lg border transition-all ${currentResumeId === r.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                      <button onClick={() => handleLoadResume(r)} className="flex-1 text-left">
+                        <p className="text-xs font-medium">{r.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{r.template} template</p>
+                      </button>
+                      <button onClick={() => handleDeleteResume(r.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* QR Code Toggle */}
             <div className="feature-card p-5">
