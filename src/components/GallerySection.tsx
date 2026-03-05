@@ -35,7 +35,7 @@ export default function GallerySection() {
           </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {preview.slice(1).map((img, i) => (
+          {preview.map((img, i) => (
             <Link
               to="/gallery"
               key={img.id}
